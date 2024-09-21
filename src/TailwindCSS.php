@@ -1,6 +1,6 @@
 <?php
 
-namespace Syahril\TailwindCss;
+namespace Luberius\TailwindCss;
 
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Console\Helper\ProgressBar;

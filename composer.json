@@ -1,5 +1,5 @@
 {
-    "name": "syahril/tailwindcss",
+    "name": "luberius/tailwindcss",
     "description": "A Tailwind CSS package for PHP projects",
     "type": "library",
     "license": "MIT",
@@ -20,12 +20,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Syahril\\TailwindCss\\": "src/"
+            "Luberius\\TailwindCss\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Syahril\\TailwindCss\\Tests\\": "tests/"
+            "Luberius\\TailwindCss\\Tests\\": "tests/"
         }
     },
     "scripts": {

@@ -1,9 +1,9 @@
 <?php
 
-namespace Syahril\TailwindCss\Tests;
+namespace Luberius\TailwindCss\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Syahril\TailwindCss\TailwindCss;
+use Luberius\TailwindCss\TailwindCss;
 use ReflectionClass;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
