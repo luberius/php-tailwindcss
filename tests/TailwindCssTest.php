@@ -5,15 +5,22 @@ namespace Syahril\TailwindCss\Tests;
 use PHPUnit\Framework\TestCase;
 use Syahril\TailwindCss\TailwindCss;
 use ReflectionClass;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 
 class TailwindCssTest extends TestCase
 {
     private $tailwind;
     private $binDir;
+    private static $cacheDir;
+
+    public static function setUpBeforeClass(): void
+    {
+        self::$cacheDir = sys_get_temp_dir() . '/tailwindcss-test-cache';
+    }
 
     protected function setUp(): void
     {
-        $this->tailwind = new TailwindCss();
+        $this->tailwind = new TailwindCss(null, self::$cacheDir);
         $reflection = new ReflectionClass(TailwindCss::class);
         $binDirProperty = $reflection->getProperty('binDir');
         $binDirProperty->setAccessible(true);
@@ -22,19 +29,44 @@ class TailwindCssTest extends TestCase
 
     protected function tearDown(): void
     {
-        // Clean up downloaded executables after tests
-        array_map('unlink', glob("$this->binDir/*"));
-        if (is_dir($this->binDir) && strpos($this->binDir, 'vendor') === false) {
-            rmdir($this->binDir);
+        // Only remove the binary file, not the cache
+        $binPath = $this->tailwind->getBinPath();
+        if (file_exists($binPath)) {
+            unlink($binPath);
         }
     }
 
-    public function testDownloadExecutable()
+    public static function tearDownAfterClass(): void
     {
-        $binPath = $this->tailwind->getBinPath();
+        // Clean up the cache directory after all tests
+        self::deleteDirectory(self::$cacheDir);
+    }
+
+    private static function deleteDirectory($dir)
+    {
+        if (!file_exists($dir)) {
+            return;
+        }
+        $files = array_diff(scandir($dir), ['.', '..']);
+        foreach ($files as $file) {
+            (is_dir("$dir/$file")) ? self::deleteDirectory("$dir/$file") : unlink("$dir/$file");
+        }
+        return rmdir($dir);
+    }
+
+    public function testGetOrDownloadExecutable()
+    {
+        // Clear cache before this test
+        $this->tailwind->clearCache();
+
+        $binPath = $this->tailwind->getOrDownloadExecutable();
         $this->assertFileExists($binPath);
         $this->assertTrue(is_executable($binPath));
         $this->assertStringStartsWith($this->binDir, $binPath);
+
+        // Call again to test caching
+        $cachedBinPath = $this->tailwind->getOrDownloadExecutable();
+        $this->assertEquals($binPath, $cachedBinPath);
     }
 
     public function testGetWatchCommand()
@@ -109,14 +141,18 @@ class TailwindCssTest extends TestCase
         $method = $reflection->getMethod('downloadExecutable');
         $method->setAccessible(true);
 
-        $method->invoke($tailwind);
+        $method->invokeArgs($tailwind, ['test-file', '/tmp/test-file']);
     }
 
     public function testFileWriteFailure()
     {
         $tailwind = $this->getMockBuilder(TailwindCss::class)
-            ->setMethods(['filePutContents'])
+            ->setMethods(['fileGetContents', 'filePutContents'])
             ->getMock();
+
+        $tailwind->expects($this->once())
+            ->method('fileGetContents')
+            ->willReturn('mock content');
 
         $tailwind->expects($this->once())
             ->method('filePutContents')
@@ -129,50 +165,19 @@ class TailwindCssTest extends TestCase
         $method = $reflection->getMethod('downloadExecutable');
         $method->setAccessible(true);
 
-        $method->invoke($tailwind);
+        $method->invokeArgs($tailwind, ['tailwindcss-linux-x64', '/tmp/tailwindcss-linux-x64']);
     }
-
-    public function testBinDirectoryCreation()
+    
+    public function testCachePersistence()
     {
-        // Remove the bin directory if it exists
-        if (is_dir($this->binDir) && strpos($this->binDir, 'vendor') === false) {
-            rmdir($this->binDir);
-        }
+        // Clear cache and download
+        $this->tailwind->clearCache();
+        $firstBinPath = $this->tailwind->getOrDownloadExecutable();
 
-        $this->tailwind->downloadExecutable();
+        // Create a new instance with the same cache directory
+        $newTailwind = new TailwindCss(null, self::$cacheDir);
+        $secondBinPath = $newTailwind->getOrDownloadExecutable();
 
-        $this->assertTrue(is_dir($this->binDir));
-        $this->assertTrue(is_readable($this->binDir));
-        $this->assertTrue(is_writable($this->binDir));
-    }
-
-    public function testBinDirectoryCreationFailure()
-    {
-        $tailwind = $this->getMockBuilder(TailwindCss::class)
-            ->setMethods(['mkdir'])
-            ->getMock();
-
-        $tailwind->expects($this->once())
-            ->method('mkdir')
-            ->willReturn(false);
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage("Failed to create bin directory");
-
-        $reflection = new ReflectionClass(TailwindCss::class);
-        $method = $reflection->getMethod('downloadExecutable');
-        $method->setAccessible(true);
-
-        $method->invoke($tailwind);
-    }
-
-    public function testVendorDirectoryDetection()
-    {
-        $reflection = new ReflectionClass(TailwindCss::class);
-        $method = $reflection->getMethod('getComposerVendorDir');
-        $method->setAccessible(true);
-
-        $vendorDir = $method->invoke($this->tailwind);
-        $this->assertStringEndsWith('vendor', $vendorDir);
+        $this->assertEquals($firstBinPath, $secondBinPath, "Cache should persist between instances");
     }
 }

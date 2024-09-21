@@ -2,26 +2,31 @@
 
 namespace Syahril\TailwindCss;
 
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Symfony\Component\Console\Helper\ProgressBar;
+use Symfony\Component\Console\Output\ConsoleOutput;
+
 class TailwindCss
 {
     private $binPath;
     private $binDir;
+    private $cache;
+    private $cacheDir;
 
-    public function __construct($binPath = null)
+    public function __construct($binPath = null, $cacheDir = null)
     {
         $this->binDir = $this->determineBinDirectory();
-        $this->binPath = $binPath ?? $this->downloadExecutable();
+        $this->cacheDir = $cacheDir ?? sys_get_temp_dir() . '/tailwindcss-cache';
+        $this->cache = new FilesystemAdapter('', 0, $this->cacheDir);
+        $this->binPath = $binPath ?? $this->getOrDownloadExecutable();
     }
 
     private function determineBinDirectory()
     {
-        // Check if we're in a Composer installation
         $vendorDir = $this->getComposerVendorDir();
         if ($vendorDir !== null) {
             return $vendorDir . '/bin';
         }
-
-        // Fallback to a local 'bin' directory for development/testing
         return dirname(__DIR__) . '/bin';
     }
 
@@ -31,40 +36,71 @@ class TailwindCss
         while (!file_exists($dir . '/vendor')) {
             $parentDir = dirname($dir);
             if ($parentDir === $dir) {
-                return null; // We've reached the root directory without finding /vendor
+                return null;
             }
             $dir = $parentDir;
         }
         return $dir . '/vendor';
     }
 
-    public function downloadExecutable()
+    public function getOrDownloadExecutable()
     {
         $os = PHP_OS_FAMILY;
         $arch = php_uname('m');
         $filename = $this->getExecutableFilename($os, $arch);
-
-        $url = "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/$filename";
         $binPath = $this->binDir . '/' . $filename;
 
-        if (!file_exists($binPath)) {
-            if (!is_dir($this->binDir)) {
-                if (!$this->mkdir($this->binDir, 0755, true)) {
-                    throw new \RuntimeException("Failed to create bin directory");
-                }
-            }
-
-            $content = $this->fileGetContents($url);
-            if ($content === false) {
-                throw new \RuntimeException("Failed to download Tailwind CSS executable");
-            }
-            if ($this->filePutContents($binPath, $content) === false) {
-                throw new \RuntimeException("Failed to write Tailwind CSS executable to disk");
-            }
-            chmod($binPath, 0755);
+        $cacheItem = $this->cache->getItem(md5($binPath));
+        if ($cacheItem->isHit()) {
+            return $cacheItem->get();
         }
 
+        if (!file_exists($binPath)) {
+            $this->downloadExecutable($filename, $binPath);
+        }
+
+        $cacheItem->set($binPath);
+        $this->cache->save($cacheItem);
+
         return $binPath;
+    }
+
+    private function downloadExecutable($filename, $binPath)
+    {
+        $url = "https://github.com/tailwindlabs/tailwindcss/releases/latest/download/$filename";
+
+        if (!is_dir($this->binDir)) {
+            if (!$this->mkdir($this->binDir, 0755, true)) {
+                throw new \RuntimeException("Failed to create bin directory");
+            }
+        }
+
+        $output = new ConsoleOutput();
+        $output->writeln("Downloading Tailwind CSS executable...");
+        $progressBar = new ProgressBar($output);
+        $progressBar->start();
+
+        $context = stream_context_create([], [
+            'notification' => function ($notificationCode, $severity, $message, $messageCode, $bytesTransferred, $bytesMax) use ($progressBar) {
+                if ($notificationCode == STREAM_NOTIFY_PROGRESS) {
+                    $progressBar->setProgress($bytesTransferred);
+                }
+            }
+        ]);
+
+        $content = $this->fileGetContents($url, false, $context);
+        if ($content === false) {
+            throw new \RuntimeException("Failed to download Tailwind CSS executable");
+        }
+
+        $progressBar->finish();
+        $output->writeln("");
+
+        if ($this->filePutContents($binPath, $content) === false) {
+            throw new \RuntimeException("Failed to write Tailwind CSS executable to disk");
+        }
+
+        chmod($binPath, 0755);
     }
 
     protected function getExecutableFilename($os, $arch)
@@ -94,10 +130,19 @@ class TailwindCss
         return $this->binPath;
     }
 
-    // These methods allow for easier mocking in tests
-    protected function fileGetContents($url)
+    public function clearCache()
     {
-        return file_get_contents($url);
+        $this->cache->clear();
+    }
+
+    public function getCacheDir()
+    {
+        return $this->cacheDir;
+    }
+
+    protected function fileGetContents($url, $useIncludePath = false, $context = null)
+    {
+        return file_get_contents($url, $useIncludePath, $context);
     }
 
     protected function filePutContents($path, $content)
