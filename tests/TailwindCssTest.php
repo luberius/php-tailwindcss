@@ -69,6 +69,28 @@ class TailwindCssTest extends TestCase
         $this->assertEquals($binPath, $cachedBinPath);
     }
 
+    public function testGetOrDownloadExecutableCache()
+    {
+        unlink($this->tailwind->getBinPath());
+
+        // Start time measurement
+        $startTime = microtime(true);
+
+        $binPath = $this->tailwind->getOrDownloadExecutable();
+
+        // End time measurement
+        $endTime = microtime(true);
+        $executionTime = $endTime - $startTime;
+
+        // Assertions
+        $this->assertFileExists($binPath);
+        $this->assertTrue(is_executable($binPath));
+        $this->assertStringStartsWith($this->binDir, $binPath);
+
+        // Assert execution time is less than 5 seconds
+        $this->assertLessThan(5, $executionTime, "Execution took longer than 5 seconds.");
+    }
+
     public function testGetWatchCommand()
     {
         $tailwind = new TailwindCss('/path/to/tailwindcss');

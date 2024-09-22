@@ -49,17 +49,27 @@ class TailwindCss
         $arch = php_uname('m');
         $filename = $this->getExecutableFilename($os, $arch);
         $binPath = $this->binDir . '/' . $filename;
+        $cachePath = $this->cacheDir . '/' . $filename;
 
         $cacheItem = $this->cache->getItem(md5($binPath));
-        if ($cacheItem->isHit()) {
-            return $cacheItem->get();
+        if ($cacheItem->isHit() && file_exists($cachePath)) {
+            if (!is_dir($this->binDir)) {
+                mkdir($this->binDir, 0755, true);
+            }
+
+            if (!file_exists($binPath)) {
+                copy($cachePath, $binPath);
+                chmod($binPath, 0755);
+            }
+            return $binPath;
         }
 
         if (!file_exists($binPath)) {
             $this->downloadExecutable($filename, $binPath);
         }
 
-        $cacheItem->set($binPath);
+        copy($binPath, $cachePath);
+        $cacheItem->set($cachePath);
         $this->cache->save($cacheItem);
 
         return $binPath;
