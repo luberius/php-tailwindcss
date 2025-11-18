@@ -115,7 +115,7 @@ class TailwindCss
 
     protected function getExecutableFilename($os, $arch)
     {
-        return match([$os, $arch]) {
+        return match ([$os, $arch]) {
             ['Darwin', 'arm64'] => 'tailwindcss-macos-arm64',
             ['Darwin', 'x86_64'] => 'tailwindcss-macos-x64',
             ['Linux', 'x86_64'] => 'tailwindcss-linux-x64',

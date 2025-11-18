@@ -3,6 +3,12 @@
     "description": "A Tailwind CSS package for PHP projects",
     "type": "library",
     "license": "MIT",
+    "keywords": ["tailwindcss", "tailwind", "css", "frontend", "utility-first", "cli"],
+    "homepage": "https://github.com/luberius/tailwindcss-php",
+    "support": {
+        "issues": "https://github.com/luberius/tailwindcss-php/issues",
+        "source": "https://github.com/luberius/tailwindcss-php"
+    },
     "authors": [
         {
             "name": "Syahril A P",
@@ -34,5 +40,23 @@
     },
     "config": {
         "bin-dir": "bin"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "archive": {
+        "exclude": [
+            "/tests",
+            "/docs",
+            "/.claude",
+            ".gitattributes",
+            ".gitignore",
+            "phpunit.xml",
+            ".phpunit.result.cache",
+            "phpcbf.phar",
+            "phpcs.phar",
+            ".editorconfig",
+            "phpcs.xml",
+            "CHANGELOG.md"
+        ]
     }
 }

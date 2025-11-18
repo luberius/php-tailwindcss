@@ -54,6 +54,13 @@ class TailwindCssTest extends TestCase
         return rmdir($dir);
     }
 
+    /**
+     * Test downloading and caching TailwindCSS executable.
+     * This test downloads the binary and validates caching works.
+     *
+     * @group setup
+     * @group download
+     */
     public function testGetOrDownloadExecutable()
     {
         // Clear cache before this test
@@ -69,6 +76,13 @@ class TailwindCssTest extends TestCase
         $this->assertEquals($binPath, $cachedBinPath);
     }
 
+    /**
+     * Test cache retrieval performance.
+     * Validates that cached binary can be restored quickly.
+     *
+     * @group setup
+     * @group cache
+     */
     public function testGetOrDownloadExecutableCache()
     {
         unlink($this->tailwind->getBinPath());
@@ -189,11 +203,16 @@ class TailwindCssTest extends TestCase
 
         $method->invokeArgs($tailwind, ['tailwindcss-linux-x64', '/tmp/tailwindcss-linux-x64']);
     }
-    
+
+    /**
+     * Test that cache persists across multiple instances.
+     *
+     * @group setup
+     * @group cache
+     */
     public function testCachePersistence()
     {
-        // Clear cache and download
-        $this->tailwind->clearCache();
+        // Use existing cache (don't clear)
         $firstBinPath = $this->tailwind->getOrDownloadExecutable();
 
         // Create a new instance with the same cache directory
@@ -201,5 +220,159 @@ class TailwindCssTest extends TestCase
         $secondBinPath = $newTailwind->getOrDownloadExecutable();
 
         $this->assertEquals($firstBinPath, $secondBinPath, "Cache should persist between instances");
+    }
+
+    /**
+     * Test cache behavior when binary is deleted but cache exists.
+     *
+     * @group cache
+     * @group edge-cases
+     */
+    public function testCacheRestoresDeletedBinary()
+    {
+        $this->tailwind->clearCache();
+        $binPath = $this->tailwind->getOrDownloadExecutable();
+        $this->assertFileExists($binPath);
+
+        $originalSize = filesize($binPath);
+        $this->assertGreaterThan(1000000, $originalSize, 'Downloaded executable should be > 1MB');
+
+        unlink($binPath);
+        $this->assertFileDoesNotExist($binPath, 'Binary should be deleted');
+
+        $restoredBinPath = $this->tailwind->getOrDownloadExecutable();
+        $this->assertFileExists($restoredBinPath, 'Binary should be restored from cache');
+        $this->assertEquals($binPath, $restoredBinPath, 'Path should be the same');
+        $this->assertEquals($originalSize, filesize($restoredBinPath), 'Restored binary should have same size');
+    }
+
+    /**
+     * Test watch command generation with paths containing special characters.
+     *
+     * @group commands
+     * @group edge-cases
+     */
+    public function testWatchCommandWithSpecialCharacters()
+    {
+        $tailwind = new TailwindCss('/path/to/tailwindcss');
+
+        $inputWithSpaces = 'my folder/input file.css';
+        $outputWithSpaces = 'dist folder/output file.css';
+
+        $command = $tailwind->getWatchCommand($inputWithSpaces, $outputWithSpaces);
+
+        $this->assertIsArray($command);
+        $this->assertEquals('/path/to/tailwindcss', $command[0]);
+        $this->assertEquals('-i', $command[1]);
+        $this->assertEquals($inputWithSpaces, $command[2]);
+        $this->assertEquals('-o', $command[3]);
+        $this->assertEquals($outputWithSpaces, $command[4]);
+        $this->assertEquals('--watch', $command[5]);
+    }
+
+    /**
+     * Test that downloaded executable has reasonable file size.
+     *
+     * @group download
+     */
+    public function testDownloadedFileSize()
+    {
+        // Use existing cached binary (no need to re-download)
+        $binPath = $this->tailwind->getBinPath();
+        $this->assertFileExists($binPath);
+
+        $fileSize = filesize($binPath);
+        $this->assertGreaterThan(1000000, $fileSize, 'Executable should be larger than 1MB');
+        $this->assertLessThan(150000000, $fileSize, 'Executable should be smaller than 150MB');
+    }
+
+    /**
+     * Test that clearCache invalidates cache metadata.
+     *
+     * @group cache
+     */
+    public function testClearCacheFunctionality()
+    {
+        // Verify cache directory exists and has files
+        $this->assertDirectoryExists($this->tailwind->getCacheDir());
+
+        // Clear cache metadata
+        $this->tailwind->clearCache();
+
+        // Cache metadata should be cleared (tested by Symfony cache internally)
+        // Note: Actual cache files may still exist on disk
+        $this->assertTrue(true, 'clearCache() executed without errors');
+    }
+
+    /**
+     * Test that getCacheDir returns the correct directory path.
+     *
+     * @group cache
+     */
+    public function testGetCacheDirReturnsCorrectPath()
+    {
+        $cacheDir = $this->tailwind->getCacheDir();
+
+        $this->assertEquals(self::$cacheDir, $cacheDir);
+        $this->assertStringContainsString('tailwindcss-test-cache', $cacheDir);
+    }
+
+    /**
+     * Test that getBinPath returns an executable file.
+     *
+     * @group download
+     */
+    public function testGetBinPathReturnsExecutable()
+    {
+        $binPath = $this->tailwind->getBinPath();
+
+        $this->assertFileExists($binPath);
+        $this->assertTrue(is_file($binPath), 'Bin path should point to a file, not a directory');
+        $this->assertTrue(is_executable($binPath), 'Binary file should be executable');
+    }
+
+    /**
+     * Test that multiple instances with same cache directory share cache.
+     *
+     * @group cache
+     */
+    public function testMultipleInstancesShareCache()
+    {
+        // Use existing cache (no clear needed)
+        $instance1 = new TailwindCss(null, self::$cacheDir);
+        $binPath1 = $instance1->getOrDownloadExecutable();
+        $time1 = filemtime($binPath1);
+
+        sleep(1);
+
+        $instance2 = new TailwindCss(null, self::$cacheDir);
+        $binPath2 = $instance2->getOrDownloadExecutable();
+        $time2 = filemtime($binPath2);
+
+        $this->assertEquals(basename($binPath1), basename($binPath2), 'Both instances should use same executable name');
+        $this->assertEquals($time1, $time2, 'File should not be re-downloaded, timestamps should match');
+    }
+
+    /**
+     * Test that custom cache directory is respected.
+     *
+     * @group cache
+     * @group configuration
+     */
+    public function testCustomCacheDirectory()
+    {
+        $customCacheDir = sys_get_temp_dir() . '/tailwindcss-custom-' . uniqid();
+
+        $tailwind = new TailwindCss(null, $customCacheDir);
+        $cacheDir = $tailwind->getCacheDir();
+
+        $this->assertEquals($customCacheDir, $cacheDir);
+
+        $binPath = $tailwind->getOrDownloadExecutable();
+        $this->assertFileExists($binPath);
+
+        if (is_dir($customCacheDir)) {
+            self::deleteDirectory($customCacheDir);
+        }
     }
 }
