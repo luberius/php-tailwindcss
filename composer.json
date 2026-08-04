@@ -4,10 +4,10 @@
     "type": "library",
     "license": "MIT",
     "keywords": ["tailwindcss", "tailwind", "css", "frontend", "utility-first", "cli"],
-    "homepage": "https://github.com/luberius/tailwindcss-php",
+    "homepage": "https://github.com/luberius/php-tailwindcss",
     "support": {
-        "issues": "https://github.com/luberius/tailwindcss-php/issues",
-        "source": "https://github.com/luberius/tailwindcss-php"
+        "issues": "https://github.com/luberius/php-tailwindcss/issues",
+        "source": "https://github.com/luberius/php-tailwindcss"
     },
     "authors": [
         {
