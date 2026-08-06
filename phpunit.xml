@@ -5,29 +5,10 @@
          colors="true"
          verbose="true">
     <testsuites>
-        <!-- Setup tests run FIRST - downloads binary and validates cache -->
-        <testsuite name="setup">
-            <directory>tests</directory>
-            <exclude>tests</exclude>
-        </testsuite>
-
-        <!-- All tests run in default order -->
         <testsuite name="all">
             <directory>tests</directory>
         </testsuite>
     </testsuites>
-
-    <!-- Define test groups -->
-    <groups>
-        <include>
-            <group>setup</group>
-            <group>cache</group>
-            <group>download</group>
-            <group>commands</group>
-            <group>edge-cases</group>
-            <group>configuration</group>
-        </include>
-    </groups>
     <coverage processUncoveredFiles="true">
         <include>
             <directory suffix=".php">src</directory>

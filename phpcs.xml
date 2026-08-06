@@ -54,13 +54,6 @@
     <!-- Forbid comments starting with # -->
     <rule ref="PEAR.Commenting.InlineComment"/>
 
-    <!-- Require strict types declaration -->
-    <rule ref="SlevomatCodingStandard.TypeHints.DeclareStrictTypes">
-        <properties>
-            <property name="spacesCountAroundEqualsSign" value="0"/>
-        </properties>
-    </rule>
-
     <!-- Disallow empty statements -->
     <rule ref="Generic.CodeAnalysis.EmptyStatement"/>
 

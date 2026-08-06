@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-06
+
 ### Added
+- Secure, checksum-verified Tailwind CSS CLI downloads with version management
+- Cached binary restoration, upgrade checks, and runnable verification
+- Fully isolated unit tests for downloads, cache behavior, upgrades, and failure handling
 - Comprehensive documentation in `/docs` directory
 - LICENSE file (MIT)
 - .gitattributes for composer package optimization
@@ -18,11 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - composer.json metadata (keywords, homepage, support URLs)
 
 ### Changed
+- Require `symfony/cache` 5.4.52 or newer and PHPUnit 9.6.33 or newer
+- Stream release assets to unique temporary files and install them atomically
+- Rename `TailwindCSS.php` to `TailwindCss.php` for case-sensitive PSR-4 compatibility
 - Improved test documentation with detailed docblocks
 - Updated composer.json with archive excludes configuration
 - Set minimum-stability to "stable" in composer.json
 
 ### Fixed
+- Validate semantic release tags, GitHub asset URLs, and SHA-256 digests before installation
+- Reject unsafe paths and symlinks, serialize concurrent downloads, and clean up failed downloads
+- Check directory, copy, rename, permission, and cache operation failures
 - Cache file validation to check file existence (commit f663292)
 - Cache persistence across application restarts
 
@@ -78,4 +89,5 @@ $executablePath = $tailwind->getBinPath();
 ---
 
 [Unreleased]: https://github.com/luberius/tailwindcss-php/compare/v1.0.0...HEAD
+[1.1.0]: https://github.com/luberius/tailwindcss-php/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/luberius/tailwindcss-php/releases/tag/v1.0.0

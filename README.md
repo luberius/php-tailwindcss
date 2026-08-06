@@ -35,9 +35,39 @@ $watchCommand = $tailwind->getWatchCommand('input.css', 'output.css');
 // For example, you might execute it using proc_open() or similar
 ```
 
-## Configuration
+### Tailwind CSS v4 Usage
 
-The package will automatically determine the correct executable for your operating system and architecture. The executable will be downloaded to the `vendor/bin` directory when installed via Composer.
+When using with Tailwind CSS v4, your CSS file should use the new import syntax:
+
+```css
+/* input.css */
+@import "tailwindcss";
+
+/* Optional: Add custom theme */
+@theme {
+  --color-primary: #3f3cbb;
+  --font-display: "Inter", sans-serif;
+  --breakpoint-3xl: 1920px;
+}
+```
+
+## How It Works
+
+The package automatically:
+1. Determines the correct Tailwind CSS executable for your OS and architecture
+2. Downloads the latest version from GitHub releases
+3. Caches the binary for fast subsequent usage
+4. Installs to `vendor/bin` directory
+
+### Supported Platforms
+
+- macOS (ARM64, x86_64)
+- Linux (x86_64, ARM64)
+- Windows (x86_64)
+
+### Version Management
+
+The package reads the latest GitHub release metadata and installs the matching platform binary. Release tags and asset URLs are validated, and the downloaded file is verified against GitHub's SHA-256 digest before it is made executable. Binaries are cached locally and revalidated before reuse.
 
 ## Development
 

@@ -1,3 +1,7 @@
 vendor/
 .phpunit.result.cache
 bin/
+.claude/
+phpcbf.phar
+phpcs.phar
+.DS_Store

@@ -3,6 +3,8 @@
 # Exclude development and testing files from Composer dist packages
 /tests/              export-ignore
 /docs/               export-ignore
+/bin/                export-ignore
+/vendor/             export-ignore
 /.claude/            export-ignore
 /.gitattributes      export-ignore
 /.gitignore          export-ignore
@@ -13,7 +15,6 @@ phpcs.phar           export-ignore
 .DS_Store            export-ignore
 .editorconfig        export-ignore
 phpcs.xml            export-ignore
-CHANGELOG.md         export-ignore
 
 # Exclude CI/CD configuration if added in future
 /.github/            export-ignore
